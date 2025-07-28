@@ -4,6 +4,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
+	base: '/uno-win-counter/',
 	test: {
 		projects: [
 			{
