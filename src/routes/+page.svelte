@@ -1,11 +1,26 @@
-<script>
-	let gameStats = [];
-	let avgDuration = 0;
-	let streaks = { Felicia: 0, Jorge: 0, max: 0, maxPlayer: null };
-	let unoShoutsPerGame = [];
+<script lang="ts">
+	// Extend the Window interface to include Chart for TypeScript
+	declare global {
+		interface Window {
+			Chart?: any;
+		}
+	}
+
+	import PlayerCard from './components/PlayerCard.svelte';
+	import LastWinner from './components/LastWinner.svelte';
+	import StatisticsSection from './components/StatisticsSection.svelte';
+	let gameStats: any[] = [];
+	let avgDuration: number = 0;
+	let streaks: { Felicia: number; Jorge: number; max: number; maxPlayer: string | null } = {
+		Felicia: 0,
+		Jorge: 0,
+		max: 0,
+		maxPlayer: null
+	};
+	let unoShoutsPerGame: number[] = []; // Array to hold UNO shouts per game
 
 	// Helper to get player name from winner key
-	function winnerName(winner) {
+	function winnerName(winner: string) {
 		return winner === 'player1' ? 'Felicia' : 'Jorge';
 	}
 
@@ -53,7 +68,7 @@
 	}
 
 	// Save each game to history and update stats/graph
-	let chart = null;
+	let chart: { destroy: () => void } | null = null;
 	import { tick } from 'svelte';
 	async function renderChart() {
 		if (typeof window === 'undefined') return;
@@ -146,7 +161,7 @@
 		});
 	}
 
-	function saveGameToHistory(winner) {
+	function saveGameToHistory(winner: any) {
 		if (typeof window === 'undefined') return;
 		let games = [];
 		const raw = localStorage.getItem('uno-game-history');
@@ -158,11 +173,19 @@
 		games.push({
 			winner,
 			duration: timer,
+			player1: player1,
+			player2: player2,
 			uno1,
 			uno2,
+			shouts: uno1 + uno2,
 			date: new Date().toISOString()
 		});
 		localStorage.setItem('uno-game-history', JSON.stringify(games));
+		// Reset uno shouts for new game
+		uno1 = 0;
+		uno2 = 0;
+		localStorage.setItem('uno-shout1', '0');
+		localStorage.setItem('uno-shout2', '0');
 		calculateStats();
 		renderChart();
 	}
@@ -176,13 +199,13 @@
 
 	// Timer state
 	let timer = 0; // seconds (current game clock)
-	let timerInterval = null;
+	let timerInterval: number | null | undefined = null;
 	let timerRunning = false;
-	let prevGameDuration = null; // duration of previous game
+	let prevGameDuration: string | number | null = null; // duration of previous game
 
 	// Last winner state
-	let lastWinner = null;
-	let lastWinTime = null;
+	let lastWinner: string | null = null;
+	let lastWinTime: number | null = null;
 
 	onMount(() => {
 		if (typeof window !== 'undefined') {
@@ -200,7 +223,7 @@
 			window.addEventListener('keydown', handleKey);
 		}
 	});
-	function formatTime(s) {
+	function formatTime(s: number) {
 		const m = Math.floor(s / 60);
 		const sec = s % 60;
 		return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
@@ -226,18 +249,18 @@
 		startTimer();
 	}
 
-	function handleKey(e) {
+	function handleKey(e: { key: string }) {
 		if (e.key === 'a' || e.key === 'A') inc1();
 		if (e.key === 'l' || e.key === 'L') inc2();
 		if (e.key === 'q' || e.key === 'Q') incUno1();
 		if (e.key === 'p' || e.key === 'P') incUno2();
 	}
 
-	function saveTimerToSet(winner) {
+	function saveTimerToSet(winner: string | null) {
 		if (typeof window !== 'undefined') {
 			// Save only the last game duration and winner
 			prevGameDuration = timer;
-			localStorage.setItem('uno-prev-game-duration', prevGameDuration);
+			localStorage.setItem('uno-prev-game-duration', String(prevGameDuration));
 			lastWinner = winner;
 			lastWinTime = timer;
 			saveGameToHistory(winner);
@@ -247,7 +270,7 @@
 	function inc1() {
 		player1++;
 		if (typeof window !== 'undefined') {
-			localStorage.setItem('uno-player1', player1);
+			localStorage.setItem('uno-player1', String(player1));
 		}
 		saveTimerToSet('player1');
 		resetTimer();
@@ -255,7 +278,7 @@
 	function inc2() {
 		player2++;
 		if (typeof window !== 'undefined') {
-			localStorage.setItem('uno-player2', player2);
+			localStorage.setItem('uno-player2', String(player2));
 		}
 		saveTimerToSet('player2');
 		resetTimer();
@@ -263,13 +286,13 @@
 	function incUno1() {
 		uno1++;
 		if (typeof window !== 'undefined') {
-			localStorage.setItem('uno-shout1', uno1);
+			localStorage.setItem('uno-shout1', String(uno1));
 		}
 	}
 	function incUno2() {
 		uno2++;
 		if (typeof window !== 'undefined') {
-			localStorage.setItem('uno-shout2', uno2);
+			localStorage.setItem('uno-shout2', String(uno2));
 		}
 	}
 
@@ -289,7 +312,9 @@
 	});
 </script>
 
-<main class="flex min-h-screen flex-col items-center justify-center gap-2 bg-black font-sans">
+<main
+	class="flex h-full min-h-screen flex-col items-center justify-center gap-2 bg-black font-sans"
+>
 	<h1
 		class="mb-2 text-4xl font-extrabold tracking-tight text-yellow-400 uppercase drop-shadow-lg md:text-5xl"
 		style="text-shadow: 2px 2px 0 #e3342f, 4px 4px 0 #fff;"
@@ -306,150 +331,30 @@
 		</div>
 	</div>
 
-	{#if lastWinner}
-		<div class="mb-2 flex flex-col items-center">
-			<span
-				class="rounded-lg border-2 border-white bg-black px-4 py-1 text-lg font-bold text-white shadow"
-				>Last Winner: <span class={lastWinner === 'player1' ? 'text-red-400' : 'text-yellow-300'}
-					>{lastWinner === 'player1' ? 'Felicia' : 'Jorge'}</span
-				></span
-			>
-			<span class="mt-1 text-xs text-green-300"
-				>Previous game duration: {formatTime(prevGameDuration ?? 0)}</span
-			>
-		</div>
-	{/if}
+	<LastWinner {lastWinner} {prevGameDuration} {formatTime} />
 
 	<div class="flex flex-col gap-8 md:flex-row md:gap-16">
-		<div
-			class="relative flex w-72 flex-col items-center rounded-2xl border-4 border-white bg-gradient-to-br from-red-600 to-yellow-400 p-8 shadow-2xl"
-		>
-			{#if player1 > player2}
-				<!-- Crown SVG for Felicia -->
-				<div class="absolute -top-15 left-0 z-10 -translate-x-1/2 -rotate-25 text-8xl">👑</div>
-			{/if}
-			<h2
-				class="mb-2 text-2xl font-extrabold text-white drop-shadow"
-				style="text-shadow: 1px 1px 0 #e3342f;"
-			>
-				Felicia
-			</h2>
-			<div
-				class="mb-4 text-6xl font-black text-white drop-shadow"
-				style="text-shadow: 2px 2px 0 #e3342f;"
-			>
-				{player1}
-			</div>
-			<button
-				on:click={inc1}
-				class="w-full rounded-lg border-2 border-white bg-red-600 px-8 py-1 text-xl font-extrabold text-white shadow-lg transition-all duration-150 hover:bg-yellow-400 hover:text-black focus:ring-4 focus:ring-yellow-400 focus:outline-none"
-			>
-				Victory <div class="text-sm text-white">
-					(Press <span class="font-mono font-semibold text-yellow-300">A</span>)
-				</div></button
-			>
-			<div class="mt-6 flex flex-col items-center">
-				<div class="mb-1 text-lg font-bold text-yellow-300">UNO Shouts</div>
-				<div class="flex items-center gap-2">
-					<span class="text-3xl font-black text-white" style="text-shadow: 1px 1px 0 #e3342f;"
-						>{uno1}</span
-					>
-					<button
-						on:click={incUno1}
-						class="rounded border-2 border-white bg-yellow-400 px-3 py-1 text-lg font-extrabold text-black shadow transition-all duration-150 hover:bg-red-600 hover:text-white focus:ring-2 focus:ring-red-400 focus:outline-none"
-						>UNO!</button
-					>
-				</div>
-				<div class="mt-1 text-xs text-white">
-					(Press <span class="font-mono font-semibold text-yellow-300">Q</span>)
-				</div>
-			</div>
-		</div>
-		<div
-			class="relative flex w-72 flex-col items-center rounded-2xl border-4 border-white bg-gradient-to-br from-yellow-400 to-red-600 p-8 shadow-2xl"
-		>
-			{#if player2 > player1}
-				<!-- Crown SVG for Jorge -->
-				<div class="absolute -top-15 -right-10 z-10 rotate-25 text-8xl">👑</div>
-			{/if}
-			<h2
-				class="mb-2 text-2xl font-extrabold text-black drop-shadow"
-				style="text-shadow: 1px 1px 0 #fff;"
-			>
-				Jorge
-			</h2>
-			<div
-				class="mb-4 text-6xl font-black text-black drop-shadow"
-				style="text-shadow: 2px 2px 0 #fff;"
-			>
-				{player2}
-			</div>
-			<button
-				on:click={inc2}
-				class="w-full rounded-lg border-2 border-white bg-yellow-400 px-8 py-1 text-xl font-extrabold text-black shadow-lg transition-all duration-150 hover:bg-red-600 hover:text-white focus:ring-4 focus:ring-red-400 focus:outline-none"
-				>Victory <div class="text-sm text-black">
-					(Press <span class="font-mono font-semibold text-red-500">L</span>)
-				</div></button
-			>
-			<div class="mt-6 flex flex-col items-center">
-				<div class="mb-1 text-lg font-bold text-red-600">UNO Shouts</div>
-				<div class="flex items-center gap-2">
-					<span class="text-3xl font-black text-black" style="text-shadow: 1px 1px 0 #fff;"
-						>{uno2}</span
-					>
-					<button
-						on:click={incUno2}
-						class="rounded border-2 border-white bg-red-600 px-3 py-1 text-lg font-extrabold text-white shadow transition-all duration-150 hover:bg-yellow-400 hover:text-black focus:ring-2 focus:ring-yellow-400 focus:outline-none"
-						>UNO!</button
-					>
-				</div>
-				<div class="mt-1 text-xs text-black">
-					(Press <span class="font-mono font-semibold text-red-600">P</span>)
-				</div>
-			</div>
-		</div>
+		<PlayerCard
+			name="Felicia"
+			score={player1}
+			unoCount={uno1}
+			onVictory={inc1}
+			onUno={incUno1}
+			isWinner={player1 > player2}
+			color="red"
+			victoryKey="A"
+		/>
+		<PlayerCard
+			name="Jorge"
+			score={player2}
+			unoCount={uno2}
+			onVictory={inc2}
+			onUno={incUno2}
+			isWinner={player2 > player1}
+			unoColor="yellow"
+			victoryKey="L"
+		/>
 	</div>
 </main>
 
-<!-- Statistics Section -->
-<div class="mx-auto mt-4 mb-6 w-full max-w-2xl rounded-xl border-2 border-white bg-black/80 p-4">
-	<h3 class="mb-2 text-xl font-bold text-yellow-300">Game Statistics</h3>
-	<div class="mb-4 flex flex-wrap gap-6">
-		<div class="flex flex-col items-center">
-			<span class="text-lg font-semibold text-white">Avg. Duration</span>
-			<span class="font-mono text-2xl text-green-300">{formatTime(avgDuration)}</span>
-		</div>
-		<div class="flex flex-col items-center">
-			<span class="text-lg font-semibold text-white">Current Streak</span>
-			<span
-				class="text-2xl font-bold {streaks.Felicia > streaks.Jorge
-					? 'text-red-400'
-					: 'text-yellow-300'}"
-				>{streaks.Felicia > streaks.Jorge
-					? `Felicia (${streaks.Felicia})`
-					: `Jorge (${streaks.Jorge})`}</span
-			>
-		</div>
-		<div class="flex flex-col items-center">
-			<span class="text-lg font-semibold text-white">Longest Streak</span>
-			<span
-				class="text-2xl font-bold {streaks.maxPlayer === 'Felicia'
-					? 'text-red-400'
-					: 'text-yellow-300'}">{streaks.maxPlayer} ({streaks.max})</span
-			>
-		</div>
-	</div>
-	<div class="h-64 w-full rounded-lg border border-white bg-black p-2">
-		<canvas id="gameChart" width="400" height="200"></canvas>
-	</div>
-	<div class="mt-4 flex flex-col gap-1">
-		<span class="text-sm font-semibold text-white">UNO Shouts (last 10 games):</span>
-		<div class="flex flex-wrap gap-2">
-			{#each gameStats as g, i}
-				<span class="rounded bg-gray-800 px-2 py-1 text-xs text-white"
-					>G{gameStats.length - i}: {g.uno1 + g.uno2} shouts</span
-				>
-			{/each}
-		</div>
-	</div>
-</div>
+<StatisticsSection {avgDuration} {streaks} {formatTime} {gameStats} />
