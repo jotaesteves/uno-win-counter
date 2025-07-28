@@ -2,7 +2,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
-/* test deployment */
+/* test deployment 1 */
 
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
