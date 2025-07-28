@@ -39,14 +39,9 @@
 			<span class="font-mono text-2xl text-blue-300">
 				{#if gameStats && gameStats.length > 0}
 					{(() => {
-						const totalShouts = gameStats.reduce(
-							(a: number, g: { uno1?: number; uno2?: number }) => a + (g.uno1 ?? 0) + (g.uno2 ?? 0),
-							0
-						);
-						console.log('Total Shouts:', totalShouts, 'Game Stats:', gameStats);
-						const totalGames = gameStats.filter(
-							(g: { uno1?: number; uno2?: number }) => (g.uno1 ?? 0) > 0 || (g.uno2 ?? 0) > 0
-						).length;
+						console.log('Game Stats:', gameStats);
+						const totalShouts = gameStats.reduce((acc, g) => acc + (g.shouts ?? 0), 0);
+						const totalGames = gameStats.length;
 						return totalGames > 0 ? Math.round(totalShouts / totalGames) : 0;
 					})()}
 				{:else}

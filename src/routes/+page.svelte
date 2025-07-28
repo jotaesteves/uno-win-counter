@@ -19,6 +19,9 @@
 	};
 	let unoShoutsPerGame: number[] = []; // Array to hold UNO shouts per game
 
+	let player1Name: string = 'Felicia';
+	let player2Name: string = 'Jorge';
+
 	// Helper to get player name from winner key
 	function winnerName(winner: string) {
 		return winner === 'player1' ? 'Felicia' : 'Jorge';
@@ -214,11 +217,15 @@
 			const u1 = localStorage.getItem('uno-shout1');
 			const u2 = localStorage.getItem('uno-shout2');
 			const prev = localStorage.getItem('uno-prev-game-duration');
+			const n1 = localStorage.getItem('uno-player1-name');
+			const n2 = localStorage.getItem('uno-player2-name');
 			if (p1 !== null && !isNaN(Number(p1))) player1 = Number(p1);
 			if (p2 !== null && !isNaN(Number(p2))) player2 = Number(p2);
 			if (u1 !== null && !isNaN(Number(u1))) uno1 = Number(u1);
 			if (u2 !== null && !isNaN(Number(u2))) uno2 = Number(u2);
 			if (prev !== null && !isNaN(Number(prev))) prevGameDuration = Number(prev);
+			if (n1) player1Name = n1;
+			if (n2) player2Name = n2;
 			startTimer();
 			window.addEventListener('keydown', handleKey);
 		}
@@ -250,6 +257,16 @@
 	}
 
 	function handleKey(e: { key: string }) {
+		// Prevent global hotkeys when editing an input (e.g., player name)
+		const active = document.activeElement;
+		if (
+			active &&
+			(active.tagName === 'INPUT' ||
+				active.tagName === 'TEXTAREA' ||
+				active.getAttribute('contenteditable') === 'true')
+		) {
+			return;
+		}
 		if (e.key === 'a' || e.key === 'A') inc1();
 		if (e.key === 'l' || e.key === 'L') inc2();
 		if (e.key === 'q' || e.key === 'Q') incUno1();
@@ -325,8 +342,11 @@
 	<div class="mb-4 flex flex-col items-center">
 		<div class="flex items-center gap-4">
 			<span
-				class="rounded-lg border-2 border-white bg-black px-6 py-2 font-mono text-3xl font-bold tracking-widest text-white shadow-lg md:text-4xl"
-				>{formatTime(timer)}</span
+				class="cursor-pointer rounded-lg border-2 border-white bg-black px-6 py-2 font-mono text-3xl font-bold tracking-widest text-white shadow-lg select-none md:text-4xl"
+				title={timerRunning ? 'Click to pause timer' : 'Click to resume timer'}
+				on:click={() => {
+					timerRunning ? pauseTimer() : startTimer();
+				}}>{formatTime(timer)}</span
 			>
 		</div>
 	</div>
@@ -335,24 +355,30 @@
 
 	<div class="flex flex-col gap-8 md:flex-row md:gap-16">
 		<PlayerCard
-			name="Felicia"
+			name={player1Name}
 			score={player1}
 			unoCount={uno1}
 			onVictory={inc1}
 			onUno={incUno1}
 			isWinner={player1 > player2}
-			color="red"
 			victoryKey="A"
+			on:nameChange={(e) => {
+				player1Name = e.detail;
+				localStorage.setItem('uno-player1-name', player1Name);
+			}}
 		/>
 		<PlayerCard
-			name="Jorge"
+			name={player2Name}
 			score={player2}
 			unoCount={uno2}
 			onVictory={inc2}
 			onUno={incUno2}
 			isWinner={player2 > player1}
-			unoColor="yellow"
 			victoryKey="L"
+			on:nameChange={(e) => {
+				player2Name = e.detail;
+				localStorage.setItem('uno-player2-name', player2Name);
+			}}
 		/>
 	</div>
 </main>

@@ -72,6 +72,9 @@
 				bind:value={tempName}
 				on:blur={finishEdit}
 				on:keydown={handleKey}
+				on:click|stopPropagation
+				on:mousedown|stopPropagation
+				on:dblclick|stopPropagation
 				style="width: 90%"
 			/>
 		{:else}
