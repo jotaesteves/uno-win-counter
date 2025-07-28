@@ -2,6 +2,8 @@ import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
+/* test deployment */
+
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
 	base: '/uno-win-counter/',
